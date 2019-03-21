@@ -1,0 +1,143 @@
+using System;
+using System.Collections.Generic;
+using Android.Util;
+using Java.IO;
+using Java.Lang;
+using Java.Net;
+using Java.Nio;
+using Java.Nio.Channels;
+using Java.Util.Concurrent;
+
+namespace XamarinAndroidVPNExample.VPNService
+{
+    public class UDPOutput : Java.Lang.Object, Java.Lang.IRunnable
+    {
+        private const string TAG = "UDPOutput";
+
+        private LocalVPNService vpnService;
+        private ConcurrentLinkedQueue inputQueue;
+        private Selector selector;
+
+        private const int MAX_CACHE_SIZE = 50;
+
+        private static LRUCache<string, DatagramChannel> channelCache = new LRUCache<string, DatagramChannel>(MAX_CACHE_SIZE);
+
+        public UDPOutput(ConcurrentLinkedQueue inputQueue, Selector selector, LocalVPNService vpnService)
+        {
+            this.inputQueue = inputQueue;
+            this.selector = selector;
+            this.vpnService = vpnService;
+        }
+
+        public void Run()
+        {
+            Log.Info(TAG, "Started");
+            try
+            {
+                Thread currentThread = Thread.CurrentThread();
+                while (true)
+                {
+                    Packet currentPacket;
+                    // TODO: Block when not connected
+                    do
+                    {
+                        currentPacket = (Packet)inputQueue.Poll();
+                        if (currentPacket != null)
+                            break;
+                        Thread.Sleep(10);
+                    } while (!currentThread.IsInterrupted);
+
+                    if (currentThread.IsInterrupted)
+                        break;
+
+                    InetAddress destinationAddress = currentPacket.ip4Header.destinationAddress;
+                    int destinationPort = currentPacket.udpHeader.destinationPort;
+                    int sourcePort = currentPacket.udpHeader.sourcePort;
+
+                    Java.Lang.String ipAndPort = new Java.Lang.String(destinationAddress.HostAddress + ":" + destinationPort + ":" + sourcePort);
+                    DatagramChannel outputChannel = (DatagramChannel)channelCache.Get(ipAndPort);
+
+                    if (outputChannel == null)
+                    {
+                        outputChannel = DatagramChannel.Open();
+                        vpnService.Protect(outputChannel.Socket());
+                        try
+                        {
+                            outputChannel.Connect(new InetSocketAddress(destinationAddress, destinationPort));
+                        }
+                        catch (IOException e)
+                        {
+                            Log.Error(TAG, "Connection error: " + ipAndPort, e);
+                            closeChannel(outputChannel);
+                            ByteBufferPool.Release(currentPacket.backingBuffer);
+                            continue;
+                        }
+
+                        outputChannel.ConfigureBlocking(false);
+                        currentPacket.SwapSourceAndDestination();
+
+                        selector.Wakeup();
+                        outputChannel.Register(selector, SelectionKey.OpRead, currentPacket);
+
+                        channelCache.Put(ipAndPort, outputChannel);
+                    }
+
+                    try
+                    {
+                        ByteBuffer payloadBuffer = currentPacket.backingBuffer;
+                        while (payloadBuffer.HasRemaining)
+                            outputChannel.Write(payloadBuffer);
+                    }
+                    catch (IOException e)
+                    {
+                        Log.Error(TAG, "Network write error: " + ipAndPort, e);
+                        channelCache.Remove(ipAndPort);
+                        closeChannel(outputChannel);
+                    }
+
+                    ByteBufferPool.Release(currentPacket.backingBuffer);
+                }
+            }
+            catch (InterruptedException e)
+            {
+                Log.Info(TAG, "Stopping");
+            }
+            catch (IOException e)
+            {
+                Log.Info(TAG, e.ToString(), e);
+            }
+            finally
+            {
+                closeAll();
+            }
+        }
+
+        public void Dispose()
+        {
+            closeAll();
+        }
+
+        private void closeAll()
+        {
+            var enumerator = channelCache.EntrySet().GetEnumerator();
+
+            while (enumerator.MoveNext())
+            {
+                var o = (DatagramChannel)enumerator.Current;
+                closeChannel(o);
+            }
+        }
+
+        private void closeChannel(DatagramChannel channel)
+        {
+            try
+            {
+                channel.Close();
+            }
+            catch (IOException e)
+            {
+                // Ignore
+            }
+        }
+    }
+}
