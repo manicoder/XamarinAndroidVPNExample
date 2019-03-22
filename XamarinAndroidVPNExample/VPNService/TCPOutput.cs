@@ -1,10 +1,10 @@
-using System;
 using Android.Util;
 using Java.IO;
 using Java.Lang;
 using Java.Net;
 using Java.Nio;
 using Java.Nio.Channels;
+using Java.Util;
 using Java.Util.Concurrent;
 using static XamarinAndroidVPNExample.VPNService.Packet;
 
@@ -107,7 +107,7 @@ namespace XamarinAndroidVPNExample.VPNService
                 outputChannel.ConfigureBlocking(false);
                 vpnService.Protect(outputChannel.Socket());
 
-                TCB tcb = new TCB(ipAndPort, random.Next(Short.MaxValue + 1), tcpHeader.sequenceNumber, tcpHeader.sequenceNumber + 1,
+                TCB tcb = new TCB(ipAndPort, random.NextInt(Short.MaxValue + 1), tcpHeader.sequenceNumber, tcpHeader.sequenceNumber + 1,
                         tcpHeader.acknowledgementNumber, outputChannel, currentPacket);
                 TCB.PutTCB(ipAndPort, tcb);
 

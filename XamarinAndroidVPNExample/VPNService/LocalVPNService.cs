@@ -43,7 +43,7 @@ namespace XamarinAndroidVPNExample.VPNService
 
             isRunning = true;
             SetupVPN();
-
+            
             if (vpnInterface == null)
             {
                 Log.Error(TAG, "Vpn Interface is null. Something when wrong.");
@@ -75,6 +75,7 @@ namespace XamarinAndroidVPNExample.VPNService
                 Log.Error(TAG, "Error starting service", e);
                 Cleanup();
             }
+            
         }
 
         private void SetupVPN()
@@ -85,7 +86,9 @@ namespace XamarinAndroidVPNExample.VPNService
                 builder.AddAddress(VPN_ADDRESS, 32);
                 builder.AddRoute(VPN_ROUTE, 0);
                 builder.AddDnsServer(DNS_ADDRESS);
-                vpnInterface = builder.SetSession(GetString(Resource.String.app_name)).SetConfigureIntent(pendingIntent).Establish();
+                builder.SetSession(GetString(Resource.String.app_name));
+                builder.SetConfigureIntent(pendingIntent);
+                vpnInterface = builder.Establish();
             }
         }
 

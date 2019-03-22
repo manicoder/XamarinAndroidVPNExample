@@ -1,11 +1,13 @@
 using Java.IO;
+using Java.Lang;
 using Java.Nio.Channels;
+using System.Collections.Generic;
 
 namespace XamarinAndroidVPNExample.VPNService
 {
-    public class TCB : Java.Lang.Object
+    public class TCB : Object
     {
-        public Java.Lang.String ipAndPort;
+        public String ipAndPort;
 
         public long mySequenceNum, theirSequenceNum;
         public long myAcknowledgementNum, theirAcknowledgementNum;
@@ -31,26 +33,23 @@ namespace XamarinAndroidVPNExample.VPNService
 
         private static LRUCache<string, TCB> tcbCache = new LRUCache<string, TCB>(MAX_CACHE_SIZE);
 
-        //        new LRUCache<>(MAX_CACHE_SIZE, new LRUCache.CleanupCallback<String, TCB>()
-        //        {
-        //        @Override
-        //            public void cleanup(Map.Entry<String, TCB> eldest)
-        //{
-        //    eldest.getValue().closeChannel();
-        //}
-
-
-        public static TCB GetTCB(Java.Lang.String ipAndPort)
+        public static TCB GetTCB(String ipAndPort)
         {
-            return (TCB)tcbCache.Get(ipAndPort);
+            lock (tcbCache)
+            {
+                return (TCB)tcbCache.Get(ipAndPort);
+            }
         }
 
-        public static void PutTCB(Java.Lang.String ipAndPort, TCB tcb)
+        public static void PutTCB(String ipAndPort, TCB tcb)
         {
-            tcbCache.Put(ipAndPort, tcb);
+            lock (tcbCache)
+            {
+                tcbCache.Put(ipAndPort, tcb);
+            }
         }
 
-        public TCB(Java.Lang.String ipAndPort, long mySequenceNum, long theirSequenceNum, long myAcknowledgementNum, long theirAcknowledgementNum,
+        public TCB(String ipAndPort, long mySequenceNum, long theirSequenceNum, long myAcknowledgementNum, long theirAcknowledgementNum,
                    SocketChannel channel, Packet referencePacket)
         {
             this.ipAndPort = ipAndPort;
@@ -67,17 +66,23 @@ namespace XamarinAndroidVPNExample.VPNService
         public static void CloseTCB(TCB tcb)
         {
             tcb.CloseChannel();
-            tcbCache.Remove(tcb.ipAndPort);
+            lock (tcbCache)
+            {
+                tcbCache.Remove(tcb.ipAndPort);
+            }
         }
 
         public static void CloseAll()
         {
-            var enumerator = tcbCache.EntrySet().GetEnumerator();
-
-            while (enumerator.MoveNext())
+            lock (tcbCache)
             {
-                var o = (TCB)enumerator.Current;
-                o.CloseChannel();
+                var jdictionaryFromHashMap = new Android.Runtime.JavaDictionary<string, TCB>(tcbCache.Handle, Android.Runtime.JniHandleOwnership.DoNotRegister);
+
+                foreach (KeyValuePair<string, TCB> item in jdictionaryFromHashMap)
+                {
+                    item.Value.CloseChannel();
+                    tcbCache.Remove(item.Key, item.Value);
+                }
             }
         }
 

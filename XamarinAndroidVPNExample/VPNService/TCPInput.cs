@@ -33,6 +33,49 @@ namespace XamarinAndroidVPNExample.VPNService
             this.selector = selector;
         }
 
+        public void Run()
+        {
+            try
+            {
+                Log.Debug(TAG, "Started");
+                while (!Thread.Interrupted())
+                {
+                    int readyChannels = selector.Select();
+
+                    if (readyChannels == 0)
+                    {
+                        Thread.Sleep(10);
+                        continue;
+                    }
+
+                    var keys = selector.SelectedKeys();
+                    List<SelectionKey> keyIterator = keys.ToList();
+
+                    foreach (var key in keys)
+                    {
+                        if (!Thread.Interrupted())
+                        {
+                            if (key.IsValid)
+                            {
+                                if (key.IsConnectable)
+                                    ProcessConnect(key, keyIterator);
+                                else if (key.IsReadable)
+                                    processInput(key, keyIterator);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (InterruptedException e)
+            {
+                Log.Info(TAG, "Stopping");
+            }
+            catch (IOException e)
+            {
+                Log.Warn(TAG, e.ToString(), e);
+            }
+        }
+
         private void ProcessConnect(SelectionKey key, List<SelectionKey> keyIterator)
         {
             TCB tcb = (TCB)key.Attachment();
@@ -124,49 +167,6 @@ namespace XamarinAndroidVPNExample.VPNService
             }
 
             outputQueue.Offer(receiveBuffer);
-        }
-
-        public void Run()
-        {
-            try
-            {
-                Log.Debug(TAG, "Started");
-                while (!Thread.Interrupted())
-                {
-                    int readyChannels = selector.Select();
-
-                    if (readyChannels == 0)
-                    {
-                        Thread.Sleep(10);
-                        continue;
-                    }
-
-                    var keys = selector.SelectedKeys();
-                    List<SelectionKey> keyIterator = keys.ToList<SelectionKey>();
-
-                    foreach (var key in keys)
-                    {
-                        if (!Thread.Interrupted())
-                        {
-                            if (key.IsValid)
-                            {
-                                if (key.IsConnectable)
-                                    ProcessConnect(key, keyIterator);
-                                else if (key.IsReadable)
-                                    processInput(key, keyIterator);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (InterruptedException e)
-            {
-                Log.Info(TAG, "Stopping");
-            }
-            catch (IOException e)
-            {
-                Log.Warn(TAG, e.ToString(), e);
-            }
         }
     }
 }
