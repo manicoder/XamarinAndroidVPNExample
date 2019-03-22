@@ -4,7 +4,7 @@ using Android.Content;
 using Android.Net;
 using Android.OS;
 using Android.Runtime;
-using Android.Support.Design.Widget;
+using Android.Support.V4.Content;
 using Android.Support.V7.App;
 using Android.Views;
 using Android.Widget;
@@ -19,17 +19,7 @@ namespace XamarinAndroidVPNExample
 
         private bool _waitingForVPNStart;
 
-
-        protected override void OnCreate(Bundle savedInstanceState)
-        {
-            base.OnCreate(savedInstanceState);
-            SetContentView(Resource.Layout.activity_main);
-
-            _waitingForVPNStart = false;
-            RegisterReceiver(new VpnStateReceiver(this), new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
-
-            StartVPN();
-        }
+        VpnStateReceiver vpnStateReceiver;
 
         public class VpnStateReceiver : BroadcastReceiver
         {
@@ -53,6 +43,32 @@ namespace XamarinAndroidVPNExample
                 }
             }
         }
+
+
+        protected override void OnCreate(Bundle savedInstanceState)
+        {
+            base.OnCreate(savedInstanceState);
+            SetContentView(Resource.Layout.activity_main);
+
+         //   Button btStart = FindViewById<Button>(Resource.Id.btStart);
+           // btStart.Click += BtStart_Click;
+
+
+
+            vpnStateReceiver = new VpnStateReceiver(this);
+
+            _waitingForVPNStart = false;
+            LocalBroadcastManager.GetInstance(this).RegisterReceiver(vpnStateReceiver,
+                    new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
+
+
+            StartVPN();
+        }
+
+        private void BtStart_Click(object sender, EventArgs e)
+        {           
+            StartVPN();
+        }       
 
         private void StartVPN()
         {

@@ -46,7 +46,7 @@ namespace XamarinAndroidVPNExample.VPNService
 
             if (vpnInterface == null)
             {
-                Log.Error(TAG, "Vpn Interface is null");
+                Log.Error(TAG, "Vpn Interface is null. Something when wrong.");
                 StopSelf();
                 return;
             }
