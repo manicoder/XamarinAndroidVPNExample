@@ -1,6 +1,7 @@
 using Java.IO;
 using Java.Lang;
 using Java.Nio.Channels;
+using Java.Util;
 using System.Collections.Generic;
 
 namespace XamarinAndroidVPNExample.VPNService
@@ -31,7 +32,7 @@ namespace XamarinAndroidVPNExample.VPNService
 
         private const int MAX_CACHE_SIZE = 50; // XXX: Is this ideal?
 
-        private static LRUCache<string, TCB> tcbCache = new LRUCache<string, TCB>(MAX_CACHE_SIZE);
+        private static TCBLRUCache tcbCache = new TCBLRUCache(MAX_CACHE_SIZE);
 
         public static TCB GetTCB(String ipAndPort)
         {
@@ -76,12 +77,16 @@ namespace XamarinAndroidVPNExample.VPNService
         {
             lock (tcbCache)
             {
-                var jdictionaryFromHashMap = new Android.Runtime.JavaDictionary<string, TCB>(tcbCache.Handle, Android.Runtime.JniHandleOwnership.DoNotRegister);
-
-                foreach (KeyValuePair<string, TCB> item in jdictionaryFromHashMap)
+                var it = tcbCache.EntrySet().GetEnumerator();
+                while (it.MoveNext())
                 {
-                    item.Value.CloseChannel();
-                    tcbCache.Remove(item.Key, item.Value);
+                    try
+                    {
+                        var tcb = (TCB)((IMapEntry)it.Current).Value;
+                        tcb.CloseChannel();
+                        tcbCache.Remove(tcb);
+                    }
+                    catch { }
                 }
             }
         }
@@ -95,6 +100,18 @@ namespace XamarinAndroidVPNExample.VPNService
             catch (IOException e)
             {
                 // Ignore
+            }
+        }
+
+        public class TCBLRUCache : LRUCache<string, TCB>
+        {
+            public TCBLRUCache(int maxSize) : base(maxSize)
+            {
+            }
+
+            public override void Cleanup(IMapEntry eldest)
+            {
+                ((TCB)eldest).CloseChannel();
             }
         }
     }

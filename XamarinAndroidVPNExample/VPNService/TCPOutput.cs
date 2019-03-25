@@ -63,6 +63,9 @@ namespace XamarinAndroidVPNExample.VPNService
 
                     Java.Lang.String ipAndPort = new Java.Lang.String(destinationAddress.HostAddress + ":" +
                              destinationPort + ":" + sourcePort);
+
+                    System.Console.WriteLine("TCP Out: " + ipAndPort);
+
                     TCB tcb = TCB.GetTCB(ipAndPort);
                     if (tcb == null)
                         InitializeConnection(ipAndPort, destinationAddress, destinationPort,
@@ -214,7 +217,8 @@ namespace XamarinAndroidVPNExample.VPNService
                     if (!tcb.waitingForNetworkData)
                     {
                         selector.Wakeup();
-                        tcb.selectionKey.InterestOps(SelectionKey.OpRead);
+                        // tcb.selectionKey.InterestOps(SelectionKey.OpRead);
+                        tcb.selectionKey.InterestOps();
                         tcb.waitingForNetworkData = true;
                     }
 
@@ -240,9 +244,9 @@ namespace XamarinAndroidVPNExample.VPNService
 
                 outputQueue.Offer(responseBuffer);
             }
-            catch
+            catch(Exception ex)
             {
-                throw new IOException();
+                System.Console.WriteLine(ex.Message);
             }
         }
 

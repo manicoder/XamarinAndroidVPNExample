@@ -97,7 +97,8 @@ namespace XamarinAndroidVPNExample.VPNService
                     outputQueue.Offer(responseBuffer);
 
                     tcb.mySequenceNum++; // SYN counts as a byte
-                    key.InterestOps(SelectionKey.OpRead);
+                    //key.InterestOps(Operations.Read);
+                    key.InterestOps();
                 }
             }
             catch (IOException e)
@@ -112,6 +113,8 @@ namespace XamarinAndroidVPNExample.VPNService
 
         private void processInput(SelectionKey key, List<SelectionKey> keyIterator)
         {
+            System.Console.WriteLine("TCP In");
+
             if (keyIterator[0] != null)
             {
                 keyIterator.RemoveAt(0);
@@ -143,7 +146,8 @@ namespace XamarinAndroidVPNExample.VPNService
                 if (readBytes == -1)
                 {
                     // End of stream, stop waiting until we push more data
-                    key.InterestOps(0);
+                    //key.InterestOps(0);
+                    key.InterestOps();
                     tcb.waitingForNetworkData = false;
 
                     if (tcb.status != TCBStatus.CLOSE_WAIT)

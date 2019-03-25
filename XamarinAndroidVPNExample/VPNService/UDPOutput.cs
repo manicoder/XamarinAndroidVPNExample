@@ -6,6 +6,7 @@ using Java.Lang;
 using Java.Net;
 using Java.Nio;
 using Java.Nio.Channels;
+using Java.Util;
 using Java.Util.Concurrent;
 
 namespace XamarinAndroidVPNExample.VPNService
@@ -20,13 +21,14 @@ namespace XamarinAndroidVPNExample.VPNService
 
         private const int MAX_CACHE_SIZE = 50;
 
-        private static LRUCache<string, DatagramChannel> channelCache = new LRUCache<string, DatagramChannel>(MAX_CACHE_SIZE);
+        private LRUChannelCache channelCache;
 
         public UDPOutput(ConcurrentLinkedQueue inputQueue, Selector selector, LocalVPNService vpnService)
         {
             this.inputQueue = inputQueue;
             this.selector = selector;
             this.vpnService = vpnService;
+            this.channelCache = new LRUChannelCache(this, MAX_CACHE_SIZE);
         }
 
         public void Run()
@@ -55,6 +57,9 @@ namespace XamarinAndroidVPNExample.VPNService
                     int sourcePort = currentPacket.udpHeader.sourcePort;
 
                     Java.Lang.String ipAndPort = new Java.Lang.String(destinationAddress.HostAddress + ":" + destinationPort + ":" + sourcePort);
+
+                    System.Console.WriteLine("UDP Out: " + ipAndPort);
+
                     DatagramChannel outputChannel = (DatagramChannel)channelCache.Get(ipAndPort);
 
                     if (outputChannel == null)
@@ -137,6 +142,21 @@ namespace XamarinAndroidVPNExample.VPNService
             catch (IOException e)
             {
                 // Ignore
+            }
+        }
+
+        public class LRUChannelCache : LRUCache<string, DatagramChannel>
+        {
+            UDPOutput output;
+
+            public LRUChannelCache(UDPOutput output, int maxSize) : base(maxSize)
+            {
+                this.output = output;
+            }
+
+            public override void Cleanup(IMapEntry eldest)
+            {
+                output.closeChannel((DatagramChannel)eldest.Value);
             }
         }
     }

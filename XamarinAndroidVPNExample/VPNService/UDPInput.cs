@@ -1,4 +1,7 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using Android.Util;
 using Java.IO;
 using Java.Lang;
@@ -37,15 +40,17 @@ namespace XamarinAndroidVPNExample.VPNService
                         continue;
                     }
 
-                    var keys = selector.SelectedKeys();
+                    System.Console.WriteLine("UDP In");
 
-                    foreach (var key in keys)
+                    var keys = selector.SelectedKeys().ToList();
+
+                    foreach(var key in keys)
                     {
                         if (!Thread.Interrupted())
                         {
                             if (key.IsValid && key.IsReadable)
                             {
-                                keys.Remove(key);
+                                selector.SelectedKeys().Remove(key);
 
                                 ByteBuffer receiveBuffer = ByteBufferPool.acquire();
                                 // Leave space for the header
@@ -74,11 +79,6 @@ namespace XamarinAndroidVPNExample.VPNService
             {
                 Log.Warn(TAG, e.ToString(), e);
             }
-        }
-
-        public void Dispose()
-        {
-            throw new NotImplementedException();
         }
     }
 }

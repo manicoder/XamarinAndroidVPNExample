@@ -191,10 +191,12 @@ namespace XamarinAndroidVPNExample.VPNService
                             if (packet.IsUDP)
                             {
                                 deviceToNetworkUDPQueue.Offer(packet);
+                                System.Console.WriteLine("-> Device (UDP) to network write");
                             }
                             else if (packet.IsTCP)
                             {
                                 deviceToNetworkTCPQueue.Offer(packet);
+                                System.Console.WriteLine("-> Device (TCP) to network write");
                             }
                             else
                             {
@@ -215,6 +217,8 @@ namespace XamarinAndroidVPNExample.VPNService
                             while (bufferFromNetwork.HasRemaining)
                                 vpnOutput.Write(bufferFromNetwork);
                             dataReceived = true;
+
+                            System.Console.WriteLine("<- Network to device write");
 
                             ByteBufferPool.Release(bufferFromNetwork);
                         }

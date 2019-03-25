@@ -2,7 +2,7 @@ using Java.Util;
 
 namespace XamarinAndroidVPNExample.VPNService
 {
-    public partial class LRUCache<K, V> : LinkedHashMap
+    public abstract class LRUCache<K, V> : LinkedHashMap
     {
         private int maxSize;
 
@@ -23,6 +23,8 @@ namespace XamarinAndroidVPNExample.VPNService
             return false;
         }
 
-        partial void Cleanup(IMapEntry eldest);
+        public virtual void Cleanup(IMapEntry eldest)
+        {
+        }
     }
 }

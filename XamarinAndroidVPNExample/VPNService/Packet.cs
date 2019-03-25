@@ -76,31 +76,38 @@ namespace XamarinAndroidVPNExample.VPNService
 
         public void updateTCPBuffer(ByteBuffer buffer, byte flags, long sequenceNum, long ackNum, int payloadSize)
         {
-            buffer.Position(0);
-            FillHeader(buffer);
-            backingBuffer = buffer;
+            try
+            {
+                buffer.Position(0);
+                FillHeader(buffer);
+                backingBuffer = buffer;
 
-            tcpHeader.flags = flags;
-            backingBuffer.Put(IP4_HEADER_SIZE + 13, (sbyte)flags);
+                tcpHeader.flags = flags;
+                backingBuffer.Put(IP4_HEADER_SIZE + 13, (sbyte)flags);
 
-            tcpHeader.sequenceNumber = sequenceNum;
-            backingBuffer.PutInt(IP4_HEADER_SIZE + 4, (int)sequenceNum);
+                tcpHeader.sequenceNumber = sequenceNum;
+                backingBuffer.PutInt(IP4_HEADER_SIZE + 4, (int)sequenceNum);
 
-            tcpHeader.acknowledgementNumber = ackNum;
-            backingBuffer.PutInt(IP4_HEADER_SIZE + 8, (int)ackNum);
+                tcpHeader.acknowledgementNumber = ackNum;
+                backingBuffer.PutInt(IP4_HEADER_SIZE + 8, (int)ackNum);
 
-            // Reset header size, since we don't need options
-            byte dataOffset = (byte)(TCP_HEADER_SIZE << 2);
-            tcpHeader.dataOffsetAndReserved = dataOffset;
-            backingBuffer.Put(IP4_HEADER_SIZE + 12, (sbyte)dataOffset);
+                // Reset header size, since we don't need options
+                byte dataOffset = (byte)(TCP_HEADER_SIZE << 2);
+                tcpHeader.dataOffsetAndReserved = dataOffset;
+                backingBuffer.Put(IP4_HEADER_SIZE + 12, (sbyte)dataOffset);
 
-            updateTCPChecksum(payloadSize);
+                updateTCPChecksum(payloadSize);
 
-            int ip4TotalLength = IP4_HEADER_SIZE + TCP_HEADER_SIZE + payloadSize;
-            backingBuffer.PutShort(2, (short)ip4TotalLength);
-            ip4Header.totalLength = ip4TotalLength;
+                int ip4TotalLength = IP4_HEADER_SIZE + TCP_HEADER_SIZE + payloadSize;
+                backingBuffer.PutShort(2, (short)ip4TotalLength);
+                ip4Header.totalLength = ip4TotalLength;
 
-            updateIP4Checksum();
+                updateIP4Checksum();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
         }
 
         public void updateUDPBuffer(ByteBuffer buffer, int payloadSize)
@@ -259,18 +266,22 @@ namespace XamarinAndroidVPNExample.VPNService
 
             public void FillHeader(ByteBuffer buffer)
             {
-                buffer.Put((sbyte)(this.version << 4 | this.IHL));
-                buffer.Put((sbyte)this.typeOfService);
-                buffer.PutShort((short)this.totalLength);
+                try
+                {
+                    buffer.Put((sbyte)(this.version << 4 | this.IHL));
+                    buffer.Put((sbyte)this.typeOfService);
+                    buffer.PutShort((short)this.totalLength);
 
-                buffer.PutInt(this.identificationAndFlagsAndFragmentOffset);
+                    buffer.PutInt(this.identificationAndFlagsAndFragmentOffset);
 
-                buffer.Put((sbyte)this.TTL);
-                buffer.Put((sbyte)this.protocol);
-                buffer.PutShort((short)this.headerChecksum);
+                    buffer.Put((sbyte)this.TTL);
+                    buffer.Put((sbyte)this.protocol);
+                    buffer.PutShort((short)this.headerChecksum);
 
-                buffer.Put(this.sourceAddress.GetAddress());
-                buffer.Put(this.destinationAddress.GetAddress());
+                    buffer.Put(this.sourceAddress.GetAddress());
+                    buffer.Put(this.destinationAddress.GetAddress());
+                }
+                catch { }
             }
 
             public override string ToString()
