@@ -215,7 +215,17 @@ namespace XamarinAndroidVPNExample.VPNService
                         {
                             bufferFromNetwork.Flip();
                             while (bufferFromNetwork.HasRemaining)
-                                vpnOutput.Write(bufferFromNetwork);
+                            {
+                                try
+                                {
+                                    vpnOutput.Write(bufferFromNetwork);
+                                }
+                                catch (Exception ex)
+                                {
+                                    bufferFromNetwork.Clear();
+                                    System.Console.WriteLine(ex.Message);
+                                }
+                            }
                             dataReceived = true;
 
                             System.Console.WriteLine("<- Network to device write");

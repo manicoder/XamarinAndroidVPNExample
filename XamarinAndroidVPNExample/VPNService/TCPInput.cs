@@ -115,62 +115,70 @@ namespace XamarinAndroidVPNExample.VPNService
         {
             System.Console.WriteLine("TCP In");
 
-            if (keyIterator[0] != null)
+            try
             {
-                keyIterator.RemoveAt(0);
-            }
 
-            ByteBuffer receiveBuffer = ByteBufferPool.acquire();
-            // Leave space for the header
-            receiveBuffer.Position(HEADER_SIZE);
-
-            TCB tcb = (TCB)key.Attachment();
-            lock (tcb)
-            {
-                Packet referencePacket = tcb.referencePacket;
-                SocketChannel inputChannel = (SocketChannel)key.Channel();
-                int readBytes;
-                try
+                if (keyIterator[0] != null)
                 {
-                    readBytes = inputChannel.Read(receiveBuffer);
-                }
-                catch (IOException e)
-                {
-                    Log.Error(TAG, "Network read error: " + tcb.ipAndPort, e);
-                    referencePacket.updateTCPBuffer(receiveBuffer, (byte)Packet.TCPHeader.RST, 0, tcb.myAcknowledgementNum, 0);
-                    outputQueue.Offer(receiveBuffer);
-                    TCB.CloseTCB(tcb);
-                    return;
+                    keyIterator.RemoveAt(0);
                 }
 
-                if (readBytes == -1)
-                {
-                    // End of stream, stop waiting until we push more data
-                    //key.InterestOps(0);
-                    key.InterestOps();
-                    tcb.waitingForNetworkData = false;
+                ByteBuffer receiveBuffer = ByteBufferPool.acquire();
+                // Leave space for the header
+                receiveBuffer.Position(HEADER_SIZE);
 
-                    if (tcb.status != TCBStatus.CLOSE_WAIT)
+                TCB tcb = (TCB)key.Attachment();
+                lock (tcb)
+                {
+                    Packet referencePacket = tcb.referencePacket;
+                    SocketChannel inputChannel = (SocketChannel)key.Channel();
+                    int readBytes;
+                    try
                     {
-                        ByteBufferPool.Release(receiveBuffer);
+                        readBytes = inputChannel.Read(receiveBuffer);
+                    }
+                    catch (IOException e)
+                    {
+                        Log.Error(TAG, "Network read error: " + tcb.ipAndPort, e);
+                        referencePacket.updateTCPBuffer(receiveBuffer, (byte)Packet.TCPHeader.RST, 0, tcb.myAcknowledgementNum, 0);
+                        outputQueue.Offer(receiveBuffer);
+                        TCB.CloseTCB(tcb);
                         return;
                     }
 
-                    tcb.status = TCBStatus.LAST_ACK;
-                    referencePacket.updateTCPBuffer(receiveBuffer, (byte)Packet.TCPHeader.FIN, tcb.mySequenceNum, tcb.myAcknowledgementNum, 0);
-                    tcb.mySequenceNum++; // FIN counts as a byte
-                }
-                else
-                {
-                    // XXX: We should ideally be splitting segments by MTU/MSS, but this seems to work without
-                    referencePacket.updateTCPBuffer(receiveBuffer, (byte)(Packet.TCPHeader.PSH | Packet.TCPHeader.ACK),
-                            tcb.mySequenceNum, tcb.myAcknowledgementNum, readBytes);
-                    tcb.mySequenceNum += readBytes; // Next sequence number
-                    receiveBuffer.Position(HEADER_SIZE + readBytes);
-                }
-            }
+                    if (readBytes == -1)
+                    {
+                        // End of stream, stop waiting until we push more data
+                        //key.InterestOps(0);
+                        key.InterestOps();
+                        tcb.waitingForNetworkData = false;
 
-            outputQueue.Offer(receiveBuffer);
+                        if (tcb.status != TCBStatus.CLOSE_WAIT)
+                        {
+                            ByteBufferPool.Release(receiveBuffer);
+                            return;
+                        }
+
+                        tcb.status = TCBStatus.LAST_ACK;
+                        referencePacket.updateTCPBuffer(receiveBuffer, (byte)Packet.TCPHeader.FIN, tcb.mySequenceNum, tcb.myAcknowledgementNum, 0);
+                        tcb.mySequenceNum++; // FIN counts as a byte
+                    }
+                    else
+                    {
+                        // XXX: We should ideally be splitting segments by MTU/MSS, but this seems to work without
+                        referencePacket.updateTCPBuffer(receiveBuffer, (byte)(Packet.TCPHeader.PSH | Packet.TCPHeader.ACK),
+                                tcb.mySequenceNum, tcb.myAcknowledgementNum, readBytes);
+                        tcb.mySequenceNum += readBytes; // Next sequence number
+                        receiveBuffer.Position(HEADER_SIZE + readBytes);
+                    }
+                }
+
+                outputQueue.Offer(receiveBuffer);
+            }
+            catch (Java.Lang.Exception ex)
+            {
+                System.Console.WriteLine(ex.Message);
+            }
         }
     }
 }

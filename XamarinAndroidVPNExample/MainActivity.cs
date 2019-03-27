@@ -44,29 +44,24 @@ namespace XamarinAndroidVPNExample
             }
         }
 
-
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
             SetContentView(Resource.Layout.activity_main);
 
-         //   Button btStart = FindViewById<Button>(Resource.Id.btStart);
-           // btStart.Click += BtStart_Click;
+           Button btStart = FindViewById<Button>(Resource.Id.btStart);
+            btStart.Click += BtStart_Click;
 
-
+            _waitingForVPNStart = false;
 
             vpnStateReceiver = new VpnStateReceiver(this);
 
-            _waitingForVPNStart = false;
             LocalBroadcastManager.GetInstance(this).RegisterReceiver(vpnStateReceiver,
                     new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
-
-
-            StartVPN();
         }
 
         private void BtStart_Click(object sender, EventArgs e)
-        {           
+        {
             StartVPN();
         }       
 
@@ -87,9 +82,31 @@ namespace XamarinAndroidVPNExample
             {
                 _waitingForVPNStart = true;
                 StartService(new Intent(this, typeof(LocalVPNService)));
+                EnableButton(false);
             }
         }
 
+        protected override void OnResume()
+        {
+            base.OnResume();
+
+            EnableButton(!_waitingForVPNStart && !LocalVPNService.IsRunning);
+        }
+
+        private void EnableButton(bool enable)
+        {
+            Button vpnButton = FindViewById<Button>(Resource.Id.btStart);
+            if (enable)
+            {
+                vpnButton.Enabled = true;
+                vpnButton.Text = "Start VPN";
+            }
+            else
+            {
+                vpnButton.Enabled = false;
+                vpnButton.Text = "Stop VPN via VPN settings";
+            }
+        }
     }
 }
 
