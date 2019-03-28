@@ -128,8 +128,12 @@ namespace XamarinAndroidVPNExample.VPNService
 
             while (enumerator.MoveNext())
             {
-                var o = (DatagramChannel)enumerator.Current;
-                closeChannel(o);
+                try
+                {
+                    var o = (DatagramChannel)enumerator.Current;
+                    closeChannel(o);
+                }
+                catch { }
             }
         }
 
